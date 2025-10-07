@@ -2,20 +2,20 @@
 
 /// Struct to represent the Bloat Removal Engine
 /// This struct will handle the analysis and removal of bloat modules
-struct BloatRemovalEngine {
+pub struct BloatRemovalEngine {
     removable_categories: Vec<RemovableCategory>,
     critical_modules: Vec<String>,
 }
 
 /// Struct to represent a category of removable modules
-struct RemovableCategory {
+pub struct RemovableCategory {
     name: String,
     modules: Vec<String>, // List of module names
 }
 
 impl BloatRemovalEngine {
     /// Creates a new Bloat Removal Engine
-    fn new() -> Self {
+    pub fn new() -> Self {
         BloatRemovalEngine {
             removable_categories: vec![
                 RemovableCategory {
@@ -60,7 +60,7 @@ impl BloatRemovalEngine {
     }
 
     /// Method to analyze and remove selected categories
-    fn analyze_and_remove(&self, selected_categories: Vec<String>) {
+    pub fn analyze_and_remove(&self, selected_categories: Vec<String>) {
         for category in &self.removable_categories {
             if selected_categories.contains(&category.name) {
                 for module in &category.modules {
@@ -84,15 +84,8 @@ impl BloatRemovalEngine {
     }
 
     /// Method to estimate size savings
-    fn estimate_size_savings(&self) -> usize {
+    pub fn estimate_size_savings(&self) -> usize {
         // Placeholder for estimated savings calculation
         1024 // Example: 1024 MB savings
     }
-}
-
-fn main() {
-    let engine = BloatRemovalEngine::new();
-    let selected_categories = vec!["Architecture Cleanup", "Industrial Hardware Removal"]; // Example selection
-    engine.analyze_and_remove(selected_categories);
-    println!("Estimated size savings: {} MB", engine.estimate_size_savings());
 }
