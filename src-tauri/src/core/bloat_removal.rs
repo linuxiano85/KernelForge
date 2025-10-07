@@ -9,8 +9,8 @@ pub struct BloatRemovalEngine {
 
 /// Struct to represent a category of removable modules
 pub struct RemovableCategory {
-    name: String,
-    modules: Vec<String>, // List of module names
+    pub name: String,
+    pub modules: Vec<String>, // List of module names
 }
 
 impl BloatRemovalEngine {
@@ -87,5 +87,24 @@ impl BloatRemovalEngine {
     pub fn estimate_size_savings(&self) -> usize {
         // Placeholder for estimated savings calculation
         1024 // Example: 1024 MB savings
+    }
+
+    /// Returns the list of all removable categories
+    pub fn get_categories(&self) -> &[RemovableCategory] {
+        &self.removable_categories
+    }
+
+    /// Returns category names as a Vec of strings
+    pub fn get_category_names(&self) -> Vec<String> {
+        self.removable_categories
+            .iter()
+            .map(|cat| cat.name.clone())
+            .collect()
+    }
+}
+
+impl Default for BloatRemovalEngine {
+    fn default() -> Self {
+        Self::new()
     }
 }
