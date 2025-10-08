@@ -1,0 +1,299 @@
+// src-tauri/src/core/config.rs
+
+use crate::core::version::KernelVersion;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+
+/// Represents a kernel configuration option
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ConfigOption {
+    pub key: String,
+    pub value: ConfigValue,
+}
+
+/// Possible values for a config option
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ConfigValue {
+    Yes,
+    No,
+    Module,
+    String(String),
+    Number(i32),
+}
+
+impl ConfigValue {
+    pub fn to_config_string(&self) -> String {
+        match self {
+            ConfigValue::Yes => "y".to_string(),
+            ConfigValue::No => "n".to_string(),
+            ConfigValue::Module => "m".to_string(),
+            ConfigValue::String(s) => format!("\"{}\"", s),
+            ConfigValue::Number(n) => n.to_string(),
+        }
+    }
+}
+
+/// Configuration generator for kernel versions
+pub struct ConfigGenerator;
+
+impl ConfigGenerator {
+    /// Generate baseline kernel configuration for a specific version
+    pub fn generate_baseline(version: KernelVersion) -> Vec<ConfigOption> {
+        let mut config = Self::get_common_config();
+        
+        // Add version-specific configurations
+        match version {
+            KernelVersion::V6_6_Lts => config.extend(Self::get_v6_6_specific()),
+            KernelVersion::V6_17 => config.extend(Self::get_v6_17_specific()),
+        }
+        
+        config
+    }
+
+    /// Common configuration options that work across all supported versions
+    fn get_common_config() -> Vec<ConfigOption> {
+        vec![
+            // Architecture basics
+            ConfigOption {
+                key: "CONFIG_64BIT".to_string(),
+                value: ConfigValue::Yes,
+            },
+            ConfigOption {
+                key: "CONFIG_X86_64".to_string(),
+                value: ConfigValue::Yes,
+            },
+            // Module support
+            ConfigOption {
+                key: "CONFIG_MODULES".to_string(),
+                value: ConfigValue::Yes,
+            },
+            ConfigOption {
+                key: "CONFIG_MODULE_UNLOAD".to_string(),
+                value: ConfigValue::Yes,
+            },
+            // Preemption model for gaming
+            ConfigOption {
+                key: "CONFIG_PREEMPT".to_string(),
+                value: ConfigValue::Yes,
+            },
+            ConfigOption {
+                key: "CONFIG_PREEMPT_COUNT".to_string(),
+                value: ConfigValue::Yes,
+            },
+            // Timer frequency - 1000Hz for low latency
+            ConfigOption {
+                key: "CONFIG_HZ_1000".to_string(),
+                value: ConfigValue::Yes,
+            },
+            ConfigOption {
+                key: "CONFIG_HZ".to_string(),
+                value: ConfigValue::Number(1000),
+            },
+            // Filesystems
+            ConfigOption {
+                key: "CONFIG_EXT4_FS".to_string(),
+                value: ConfigValue::Yes,
+            },
+            ConfigOption {
+                key: "CONFIG_BTRFS_FS".to_string(),
+                value: ConfigValue::Yes,
+            },
+            // Networking
+            ConfigOption {
+                key: "CONFIG_NET".to_string(),
+                value: ConfigValue::Yes,
+            },
+            ConfigOption {
+                key: "CONFIG_INET".to_string(),
+                value: ConfigValue::Yes,
+            },
+            ConfigOption {
+                key: "CONFIG_TCP_CONG_BBR".to_string(),
+                value: ConfigValue::Module,
+            },
+            // Basic system requirements
+            ConfigOption {
+                key: "CONFIG_SMP".to_string(),
+                value: ConfigValue::Yes,
+            },
+            ConfigOption {
+                key: "CONFIG_PROC_FS".to_string(),
+                value: ConfigValue::Yes,
+            },
+            ConfigOption {
+                key: "CONFIG_SYSFS".to_string(),
+                value: ConfigValue::Yes,
+            },
+        ]
+    }
+
+    /// Configuration specific to kernel 6.6 LTS
+    fn get_v6_6_specific() -> Vec<ConfigOption> {
+        vec![
+            // FUTEX2 support (available in 6.6)
+            ConfigOption {
+                key: "CONFIG_FUTEX".to_string(),
+                value: ConfigValue::Yes,
+            },
+        ]
+    }
+
+    /// Configuration specific to kernel 6.17
+    fn get_v6_17_specific() -> Vec<ConfigOption> {
+        vec![
+            // FUTEX2 (standard in 6.17)
+            ConfigOption {
+                key: "CONFIG_FUTEX".to_string(),
+                value: ConfigValue::Yes,
+            },
+            // Any 6.17-specific options can be added here
+            // For now, keeping it minimal
+        ]
+    }
+
+    /// Generate a .config file content from configuration options
+    pub fn to_config_file(options: &[ConfigOption]) -> String {
+        let mut lines = vec!["#".to_string(), "# Automatically generated by KernelForge".to_string(), "#".to_string()];
+        
+        for opt in options {
+            lines.push(format!("{}={}", opt.key, opt.value.to_config_string()));
+        }
+        
+        lines.join("\n")
+    }
+
+    /// Validate that a configuration is compatible with a kernel version
+    pub fn validate_config(version: KernelVersion, options: &[ConfigOption]) -> Result<(), String> {
+        // Check for required options
+        let has_64bit = options.iter().any(|o| o.key == "CONFIG_64BIT" && o.value == ConfigValue::Yes);
+        let has_x86_64 = options.iter().any(|o| o.key == "CONFIG_X86_64" && o.value == ConfigValue::Yes);
+        
+        if !has_64bit {
+            return Err("CONFIG_64BIT must be enabled".to_string());
+        }
+        if !has_x86_64 {
+            return Err("CONFIG_X86_64 must be enabled".to_string());
+        }
+
+        // Version-specific validation
+        match version {
+            KernelVersion::V6_6_Lts => {
+                // Validate 6.6-specific requirements
+                Ok(())
+            }
+            KernelVersion::V6_17 => {
+                // Validate 6.17-specific requirements
+                Ok(())
+            }
+        }
+    }
+
+    /// Get configuration options as a HashMap for easy lookup
+    pub fn to_hashmap(options: &[ConfigOption]) -> HashMap<String, ConfigValue> {
+        options.iter()
+            .map(|opt| (opt.key.clone(), opt.value.clone()))
+            .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_generate_baseline_v6_6() {
+        let config = ConfigGenerator::generate_baseline(KernelVersion::V6_6_Lts);
+        assert!(!config.is_empty());
+        
+        // Check for essential options
+        assert!(config.iter().any(|o| o.key == "CONFIG_64BIT"));
+        assert!(config.iter().any(|o| o.key == "CONFIG_X86_64"));
+        assert!(config.iter().any(|o| o.key == "CONFIG_MODULES"));
+        assert!(config.iter().any(|o| o.key == "CONFIG_PREEMPT"));
+        assert!(config.iter().any(|o| o.key == "CONFIG_HZ_1000"));
+    }
+
+    #[test]
+    fn test_generate_baseline_v6_17() {
+        let config = ConfigGenerator::generate_baseline(KernelVersion::V6_17);
+        assert!(!config.is_empty());
+        
+        // Check for essential options
+        assert!(config.iter().any(|o| o.key == "CONFIG_64BIT"));
+        assert!(config.iter().any(|o| o.key == "CONFIG_X86_64"));
+    }
+
+    #[test]
+    fn test_config_value_to_string() {
+        assert_eq!(ConfigValue::Yes.to_config_string(), "y");
+        assert_eq!(ConfigValue::No.to_config_string(), "n");
+        assert_eq!(ConfigValue::Module.to_config_string(), "m");
+        assert_eq!(ConfigValue::Number(1000).to_config_string(), "1000");
+        assert_eq!(ConfigValue::String("test".to_string()).to_config_string(), "\"test\"");
+    }
+
+    #[test]
+    fn test_to_config_file() {
+        let options = vec![
+            ConfigOption {
+                key: "CONFIG_64BIT".to_string(),
+                value: ConfigValue::Yes,
+            },
+            ConfigOption {
+                key: "CONFIG_HZ".to_string(),
+                value: ConfigValue::Number(1000),
+            },
+        ];
+        
+        let content = ConfigGenerator::to_config_file(&options);
+        assert!(content.contains("CONFIG_64BIT=y"));
+        assert!(content.contains("CONFIG_HZ=1000"));
+    }
+
+    #[test]
+    fn test_validate_config_valid() {
+        let options = vec![
+            ConfigOption {
+                key: "CONFIG_64BIT".to_string(),
+                value: ConfigValue::Yes,
+            },
+            ConfigOption {
+                key: "CONFIG_X86_64".to_string(),
+                value: ConfigValue::Yes,
+            },
+        ];
+        
+        assert!(ConfigGenerator::validate_config(KernelVersion::V6_6_Lts, &options).is_ok());
+    }
+
+    #[test]
+    fn test_validate_config_missing_64bit() {
+        let options = vec![
+            ConfigOption {
+                key: "CONFIG_X86_64".to_string(),
+                value: ConfigValue::Yes,
+            },
+        ];
+        
+        assert!(ConfigGenerator::validate_config(KernelVersion::V6_6_Lts, &options).is_err());
+    }
+
+    #[test]
+    fn test_to_hashmap() {
+        let options = vec![
+            ConfigOption {
+                key: "CONFIG_64BIT".to_string(),
+                value: ConfigValue::Yes,
+            },
+            ConfigOption {
+                key: "CONFIG_HZ".to_string(),
+                value: ConfigValue::Number(1000),
+            },
+        ];
+        
+        let map = ConfigGenerator::to_hashmap(&options);
+        assert_eq!(map.len(), 2);
+        assert_eq!(map.get("CONFIG_64BIT"), Some(&ConfigValue::Yes));
+        assert_eq!(map.get("CONFIG_HZ"), Some(&ConfigValue::Number(1000)));
+    }
+}
