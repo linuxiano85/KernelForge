@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=KernelForge
+Comment=Linux kernel optimizer for gaming performance
+Exec=kernelforge
+Icon=kernelforge
+Terminal=false
+Type=Application
+Categories=System;Utility;
+Keywords=kernel;linux;optimization;gaming;performance;
+StartupWMClass=KernelForge
