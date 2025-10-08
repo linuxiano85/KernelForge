@@ -60,9 +60,9 @@ impl BloatRemovalEngine {
     }
 
     /// Method to analyze and remove selected categories
-    fn analyze_and_remove(&self, selected_categories: Vec<String>) {
+    fn analyze_and_remove(&self, selected_categories: Vec<&str>) {
         for category in &self.removable_categories {
-            if selected_categories.contains(&category.name) {
+            if selected_categories.contains(&category.name.as_str()) {
                 for module in &category.modules {
                     if !self.critical_modules.contains(module) {
                         self.remove_module(module);
@@ -88,11 +88,4 @@ impl BloatRemovalEngine {
         // Placeholder for estimated savings calculation
         1024 // Example: 1024 MB savings
     }
-}
-
-fn main() {
-    let engine = BloatRemovalEngine::new();
-    let selected_categories = vec!["Architecture Cleanup", "Industrial Hardware Removal"]; // Example selection
-    engine.analyze_and_remove(selected_categories);
-    println!("Estimated size savings: {} MB", engine.estimate_size_savings());
 }
